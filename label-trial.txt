@@ -1,0 +1,7 @@
+mary: Model
+jane: Noun
+can: Noun
+see: Noun
+will: Model
+spot: Model
+pat: Verb
