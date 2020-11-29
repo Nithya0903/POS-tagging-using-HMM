@@ -1,0 +1,333 @@
+from collections import OrderedDict
+import re
+from math import isnan,isinf
+from copy import deepcopy
+from random import random
+
+
+def initialize_pi(tags):
+    initial_prob = dict()
+    total = 0.0
+    for tag in tags:
+        initial_prob[tag] = random()
+        total += initial_prob[tag]
+
+    initial_prob = dict((tag,(initial_prob[tag])/total) for tag in tags)
+    return initial_prob
+
+def calc_gamma(alpha, beta, tags, observation):
+    for i, word in enumerate(observation):
+        if word == '':
+            del observation[i]
+        else:
+            1
+
+    gamma = dict()
+    for i in range(1, len(observation)+1):
+        gamma[i] = dict()
+
+    for i in range(1, len(observation)+1):
+        for tag in tags:
+            gamma[i][tag] = (beta[i][tag] * alpha[i][tag]) / alpha[len(observation)+1]
+
+    return gamma
+
+def calc_eta(a_matrix, b_matrix, alpha, beta, tags, observation):
+    for i, word in enumerate(observation):
+        if word == '':
+            del observation[i]
+        else:
+            1
+    eta = dict()
+    for i in range(1, len(observation)+1):
+        eta[i] = dict()
+        for tag in tags:
+            eta[i][tag] = dict()
+    
+    for i in range(1, len(observation)):
+        for tag1 in tags:
+            for tag2 in tags:
+                eta[i][tag1][tag2] = (alpha[i][tag1] * a_matrix[tag1][tag2] * beta[i+1][tag2] * b_matrix[tag2][observation[i]])/alpha[len(observation)+1]
+    return eta
+
+def initialize_a(tags):
+    a = dict()
+    for i in tags:
+        for j in tags:
+            if i not in a:
+                a[i] = dict()
+            a[i][j] = random()
+        a[i]['f'] = random()
+    return a
+
+def initialize_b(tags, line_list):
+    b={}
+    for tag in tags:
+        b[tag]={}
+
+    for sentence in line_list:
+        for tag in tags:
+            sum = 0.
+            for word in sentence:
+                if word=='':
+                    continue
+                b[tag][word]= random()
+                sum += b[tag][word]
+            for word in sentence:
+                if word=='':
+                    continue
+                b[tag][word] = b[tag][word]/sum
+        
+        
+
+    return b
+
+def normalize_a(a, tags):
+    a_matrix = deepcopy(a)
+    total = 0.0
+    for tag1 in tags:
+        for tag2 in tags:
+            total = total + a_matrix[tag1][tag2] 
+        total = total + a_matrix[tag1]['f']
+
+    for tag1 in tags:
+        for tag2 in tags:
+            p = a_matrix[tag1][tag2]
+            a_matrix[tag1][tag2] = (a_matrix[tag1][tag2])/total
+
+        a_matrix[tag1]['f'] = (a_matrix[tag1]['f'])/total
+    
+
+    return a_matrix
+
+# changes made here
+def inlayer_norm_b(b, tag_list, observation):
+    total = dict()
+
+    for word in observation:
+        if word == '':
+            continue
+        else:
+            for i in tag_list:
+                if i not in total:
+                    total[i] = 0
+                total[i] += b[i][word]
+
+    for i in tag_list:
+        for word in observation:
+  
+            p= b[i][word]
+            b[i][word] = (b[i][word])/total[i]
+
+
+    return b
+
+
+
+def backward(a_matrix, b_matrix, pi, scale_values, observation, tags):   
+
+    beta = dict()
+    for i, word in enumerate(observation):
+        if word == '':
+            del observation[i]
+        else:
+            1
+   
+
+    for i in range(1,len(observation)+1):
+        beta[i] = dict()
+
+    for tag in tags:
+   
+        beta[len(observation)][tag] = scale_values[len(observation)]
+
+    for i in range(len(observation)-1, 0, -1):
+        j = i+1
+        for tag_pres in tags:
+            beta[i][tag_pres] = 0.0
+            for tag_future in tags:  
+  
+                beta[i][tag_pres] += (beta[j][tag_future] * a_matrix[tag_pres][tag_future] * b_matrix[tag_future][observation[i]])
+            beta[i][tag_pres] = scale_values[i] * beta[i][tag_pres]
+
+    final = 0
+    beta[final] = 0.0
+    for tag in tags:
+        beta[final] += (beta[final+1][tag] * pi[tag])
+    return beta
+
+
+def forward(a_matrix, b_matrix, pi, observation, tags):       
+    alpha = dict()
+    for i, word in enumerate(observation):
+        if word == '':
+            del observation[i]
+        else:
+            1
+    scale_values = dict()
+
+    for i in range(1,len(observation)+1):
+        alpha[i] = dict()
+
+    alpha[1] = dict((tag,(pi[tag]*b_matrix[tag][observation[0]])) for tag in tags)
+    
+    
+    scale_values[1] = 0.0
+    for tag in tags:
+        scale_values[1] += alpha[1][tag]
+
+    scale_values[1] = 1.0/scale_values[1]
+    alpha[1] = dict((tag,(alpha[1][tag]*scale_values[1])) for tag in tags)
+
+    for i in range(2, len(observation)+1):
+        j = i-1
+        scale_values[i] = 0
+        for tag_pres in tags:
+            alpha[i][tag_pres] = 0.0
+            for tag_prev in tags: 
+                alpha[i][tag_pres] += (alpha[j][tag_prev] *  b_matrix[tag_pres][observation[j]] * a_matrix[tag_prev][tag_pres])
+
+            scale_values[i] += alpha[i][tag_pres]
+        
+        scale_values[i] = 1.0/scale_values[i]
+        for tag in tags:
+            alpha[i][tag] = scale_values[i] * alpha[i][tag]
+
+    final = len(observation)+1
+    alpha[final] = 0.0
+    for tag in tags:
+        alpha[final] += (a_matrix[tag]['f']*alpha[final-1][tag])
+    return (alpha,scale_values)
+ 
+
+def baum_welch(a_matrix, b_matrix, tags, line_list):
+    for k,observation in enumerate(line_list):
+        # if k == 20:
+        #     break
+        if observation == '':
+            continue
+        else:
+            print("Iteration number:",k)
+            print("Sentence number:",observation)
+        
+        for i, word in enumerate(observation):
+            if word == '':
+                del observation[i]
+            else:
+                1
+        
+        for i in range(10):     
+            print("-----------",i,"------------")
+            #E-STEP
+            alpha, scale_values = forward(a_matrix, b_matrix, pi, observation, tags)
+            beta = backward(a_matrix, b_matrix, pi, scale_values, observation, tags)
+            
+            
+            eta = calc_eta(a_matrix, b_matrix, alpha, beta, tags, observation)
+            gamma = calc_gamma(alpha, beta, tags, observation)
+            
+            #M-STEP
+            prev_b_matrix = deepcopy(b_matrix) 
+            prev_a_matrix = deepcopy(a_matrix)
+
+            for tag in tags:
+                for word in observation:
+                    numer = denom = 0.0
+                    for t in range(1, len(observation)):
+                        if observation[t] == word:
+                            numer += gamma[t][tag]
+                        else:
+                            numer += 0
+                        denom += gamma[t][tag]
+
+                b_matrix[tag][word]  = (numer)/denom
+
+
+            for tag1 in tags:
+                for tag2 in tags:
+                    numer = denom = 0.0
+                    for t in range(1, len(observation)-1):
+                        numer += eta[t][tag1][tag2]
+                        for temp_tag in tags:
+                            denom += eta[t][tag1][temp_tag]
+                    a_matrix[tag1][tag2] = (numer)/denom
+
+
+    return a_matrix, b_matrix
+
+def tokenize(filename):
+    lines = []
+    regex = re.compile('[\W]+')
+    with open(filename, 'r') as f:
+        for line in f:
+            line = line.split(' ')
+            if line[0].startswith("#"):
+                continue
+            else:
+                for i, word in enumerate(line):
+                    line[i] = re.sub('[^a-zA-Z0-9]+', '', line[i])
+                    if line[i] == '':
+                        del line[i]
+                    else:
+                        line[i] = line[i].lower()
+
+                if not line:
+                    continue
+                lines.append(line)
+    return lines            
+
+if __name__ == '__main__':
+    filename = 'datasets/brown100.txt'
+    tags = ['NP', 'NN', 'JJ', 'IN', 'VB', 'TO', 'DT', 'PRP', 'RB', 'CC']
+    
+    line_list = tokenize(filename)
+   
+    pi = initialize_pi(tags)
+    
+    a_matrix = initialize_a(tags)
+    b_matrix = initialize_b(tags, line_list)
+    print(pi)
+    a_matrix = normalize_a(a_matrix, tags)
+    
+    
+    a_matrix, b_matrix = baum_welch(a_matrix, b_matrix, tags, line_list)
+
+    top_dict = {}
+    for tag in b_matrix:
+        col = b_matrix[tag]
+        top = sorted(col, key=col.get, reverse=True)
+        top = top[:100]
+        top_dict[tag] = top
+    
+    word_dict = {}
+    for l in line_list:
+      for w in l :
+        maxx=0
+        max_tag=''
+        for tag in tags :
+            if b_matrix[tag][w]>maxx :
+                maxx=b_matrix[tag][w]
+                max_tag=tag
+        word_dict[w] = max_tag
+        
+
+    with open('results/wordsfortags.txt','w+') as f:
+        for key in top_dict:
+            words = ', '.join(top_dict[key])
+            f.write(key + ': '+ words + '\n')
+    
+    with open('results/labeles.txt','w+') as f:
+        for key in word_dict:
+            words = word_dict[key]
+            f.write(key + ': '+ words + '\n')
+    
+    with open('results/a-matrix.txt','w+') as f1:
+        for i in (a_matrix):
+                f1.write("{} {}".format(i,a_matrix[i]))
+                f1.write("\n")
+    with open('results/b-matrix.txt','w+') as f2:
+        for i in (b_matrix):
+            for j in b_matrix[i]:
+                f2.write("{} {} {}".format(i,j,b_matrix[i][j]))
+                f2.write("\n")
+            f2.write("\n")
