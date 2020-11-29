@@ -3,7 +3,7 @@ import re
 from math import isnan,isinf
 from copy import deepcopy
 from random import random
-import preprocess
+
 
 def initialize_pi(tags):
     initial_prob = dict()
@@ -29,7 +29,6 @@ def calc_gamma(alpha, beta, tags, observation):
     for i in range(1, len(observation)+1):
         for tag in tags:
             gamma[i][tag] = (beta[i][tag] * alpha[i][tag]) / alpha[len(observation)+1]
-            # print("ALPHA", alpha[i][tag] , beta[i][tag] , alpha[len(observation)+1])
 
     return gamma
 
@@ -48,9 +47,6 @@ def calc_eta(a_matrix, b_matrix, alpha, beta, tags, observation):
     for i in range(1, len(observation)):
         for tag1 in tags:
             for tag2 in tags:
-                # print(alpha[len(observation)+1])
-                # if alpha[len(observation)+1]==0:
-                #     print(alpha)
                 eta[i][tag1][tag2] = (alpha[i][tag1] * a_matrix[tag1][tag2] * beta[i+1][tag2] * b_matrix[tag2][observation[i]])/alpha[len(observation)+1]
     return eta
 
@@ -63,7 +59,7 @@ def initialize_a(tags):
             a[i][j] = random()
         a[i]['f'] = random()
     return a
-#changes made here
+
 def initialize_b(tags, line_list):
     b={}
     for tag in tags:
@@ -93,27 +89,21 @@ def normalize_a(a, tags):
         for tag2 in tags:
             total = total + a_matrix[tag1][tag2] 
         total = total + a_matrix[tag1]['f']
-    # if total==0:
-    #     print("problem")
-    #     exit()
+
     for tag1 in tags:
         for tag2 in tags:
             p = a_matrix[tag1][tag2]
             a_matrix[tag1][tag2] = (a_matrix[tag1][tag2])/total
-            # if isnan(a_matrix[tag1][tag2]):
-            #     print("problem")
-            #     print(p,total)
-            #     exit()
+
         a_matrix[tag1]['f'] = (a_matrix[tag1]['f'])/total
-        #print("normalisied A:", tag1, a_matrix[tag1]['f'])
+    
 
     return a_matrix
 
 # changes made here
 def inlayer_norm_b(b, tag_list, observation):
     total = dict()
-    # for  tag in tag_list:
-    #     print(tag,b[tag]['reelection'])
+
     for word in observation:
         if word == '':
             continue
@@ -122,56 +112,19 @@ def inlayer_norm_b(b, tag_list, observation):
                 if i not in total:
                     total[i] = 0
                 total[i] += b[i][word]
-                # if isnan(total[i]):
-                #     print(i,b[i][word],word)
-                #     exit()
+
     for i in tag_list:
         for word in observation:
-            # if total[i]==0:
-            #     print("problem")
-            #     exit()
+  
             p= b[i][word]
             b[i][word] = (b[i][word])/total[i]
-            # if isnan(b[i][word]):
-            #     print("problem")
-            #     print(p,total[i])
-            #     print(total,i)
-            #     exit()
+
 
     return b
 
-#changes made here
-# def normalize_b(b, tags, sentences):
-#     for sentence in sentences:
-#         total = dict()
-#         for word in sentence:
-#             if word == '':
-#                 continue
-#             else:
-#                 for tag in tags:
-#                     if tag not in total:
-#                         total[tag] = 0.0
-#                     total[tag] += b[tag][word]
-#         for tag in tags:
-#             for word in sentence:
-#                 if word =='':
-#                     continue 
-#                 else:   
-#                     b[tag][word] = (b[tag][word])/total[tag]
-#     for tag in tags:
-#         b[tag]={}
 
-#     for sentence in line_list:
-#         for tag in tags:
-#             sum = 0.
-#             for word in sentence:
-#                 b[tag][word]= random()
-#                 sum += b[tag][word]
-#             for word in sentence:
-#                 b[tag][word] = b[tag][word]/sum
-#     return b
 
-def backward(a_matrix, b_matrix, pi, scale_values, observation, tags):       # beta[timestamp][tag]
+def backward(a_matrix, b_matrix, pi, scale_values, observation, tags):   
 
     beta = dict()
     for i, word in enumerate(observation):
@@ -179,13 +132,13 @@ def backward(a_matrix, b_matrix, pi, scale_values, observation, tags):       # b
             del observation[i]
         else:
             1
-    # print(observation)
+   
 
     for i in range(1,len(observation)+1):
         beta[i] = dict()
-    # Initialize the T timestamp probs
+
     for tag in tags:
-        # beta[len(observation)][tag] = a_matrix[tag]['f']
+   
         beta[len(observation)][tag] = scale_values[len(observation)]
 
     for i in range(len(observation)-1, 0, -1):
@@ -193,23 +146,18 @@ def backward(a_matrix, b_matrix, pi, scale_values, observation, tags):       # b
         for tag_pres in tags:
             beta[i][tag_pres] = 0.0
             for tag_future in tags:  
-                # print(type(tag_future),tag_future,type(observation[i]),observation[i])
-                # print(b_matrix[tag_future][observation[i]]) 
+  
                 beta[i][tag_pres] += (beta[j][tag_future] * a_matrix[tag_pres][tag_future] * b_matrix[tag_future][observation[i]])
             beta[i][tag_pres] = scale_values[i] * beta[i][tag_pres]
-    #Final layer computation
+
     final = 0
     beta[final] = 0.0
     for tag in tags:
         beta[final] += (beta[final+1][tag] * pi[tag])
     return beta
 
-# def pos_tags():
-#     tags = ['NP', 'NN', 'JJ', 'IN', 'VB', 'TO', 'DT', 'PRP', 'RB', 'CC']
-#     return tags
 
-#change
-def forward(a_matrix, b_matrix, pi, observation, tags):        # alpha[timestamp][tag]
+def forward(a_matrix, b_matrix, pi, observation, tags):       
     alpha = dict()
     for i, word in enumerate(observation):
         if word == '':
@@ -220,10 +168,10 @@ def forward(a_matrix, b_matrix, pi, observation, tags):        # alpha[timestamp
 
     for i in range(1,len(observation)+1):
         alpha[i] = dict()
-    # initialize
+
     alpha[1] = dict((tag,(pi[tag]*b_matrix[tag][observation[0]])) for tag in tags)
     
-    #scaling for the first timestep
+    
     scale_values[1] = 0.0
     for tag in tags:
         scale_values[1] += alpha[1][tag]
@@ -244,19 +192,15 @@ def forward(a_matrix, b_matrix, pi, observation, tags):        # alpha[timestamp
         scale_values[i] = 1.0/scale_values[i]
         for tag in tags:
             alpha[i][tag] = scale_values[i] * alpha[i][tag]
-            # if alpha[i][tag]==0:
-            #     print("PR")
-            #     exit()
-    #Final layer computation
+
     final = len(observation)+1
     alpha[final] = 0.0
     for tag in tags:
         alpha[final] += (a_matrix[tag]['f']*alpha[final-1][tag])
-        # print("alpha[x]",x,tag,alpha[final-1][tag],a_matrix[tag]['f'],alpha[final])
-    return alpha, scale_values
+    return (alpha,scale_values)
+ 
 
 def baum_welch(a_matrix, b_matrix, tags, line_list):
-    # observation = line_list[0]
     for k,observation in enumerate(line_list):
         # if k == 20:
         #     break
@@ -277,7 +221,7 @@ def baum_welch(a_matrix, b_matrix, tags, line_list):
             #E-STEP
             alpha, scale_values = forward(a_matrix, b_matrix, pi, observation, tags)
             beta = backward(a_matrix, b_matrix, pi, scale_values, observation, tags)
-            # alpha = forward(a_matrix, b_matrix, pi, observation, tags)
+            
             
             eta = calc_eta(a_matrix, b_matrix, alpha, beta, tags, observation)
             gamma = calc_gamma(alpha, beta, tags, observation)
@@ -295,13 +239,9 @@ def baum_welch(a_matrix, b_matrix, tags, line_list):
                         else:
                             numer += 0
                         denom += gamma[t][tag]
-                if isinf(numer) or numer>1e306:
-                    numer=1e306
-                if isinf(denom) or denom>1e306:
-                    denom=1e306
+
                 b_matrix[tag][word]  = (numer)/denom
-                if word=="reelection":
-                    print(b_matrix[tag][word],numer,denom)
+
 
             for tag1 in tags:
                 for tag2 in tags:
@@ -310,18 +250,11 @@ def baum_welch(a_matrix, b_matrix, tags, line_list):
                         numer += eta[t][tag1][tag2]
                         for temp_tag in tags:
                             denom += eta[t][tag1][temp_tag]
-                    # if denom==0:
-                    #     print("Problemmmmm")
-                    if isinf(numer) or numer>1e306:
-                        numer=1e306
-                    if isinf(denom) or denom>1e306:
-                        denom=1e306
+
 
                     a_matrix[tag1][tag2] = (numer)/denom
 
 
-            # b_matrix = inlayer_norm_b(b_matrix, tags, observation)
-            # a_matrix = normalize_a(a_matrix, tags)
     return a_matrix, b_matrix
 
 def tokenize(filename):
@@ -346,11 +279,11 @@ def tokenize(filename):
     return lines            
 
 if __name__ == '__main__':
-    filename = 'brown100.txt'
+    filename = 'datasets/brown100.txt'
     tags = ['NP', 'NN', 'JJ', 'IN', 'VB', 'TO', 'DT', 'PRP', 'RB', 'CC']
     
     line_list = tokenize(filename)
-    #print(line_list)
+   
     pi = initialize_pi(tags)
     
     a_matrix = initialize_a(tags)
@@ -393,7 +326,7 @@ if __name__ == '__main__':
     with open('a-matrix-trial.txt','w+') as f1:
         for i in (a_matrix):
                 f1.write("{} {}".format(i,a_matrix[i]))
-        f1.write("\n")
+                f1.write("\n")
     with open('b-matrix-trial.txt','w+') as f2:
         for i in (b_matrix):
             for j in b_matrix[i]:
