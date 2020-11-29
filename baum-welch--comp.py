@@ -319,8 +319,8 @@ def baum_welch(a_matrix, b_matrix, tags, line_list):
                     a_matrix[tag1][tag2] = (numer)/denom
 
 
-            b_matrix = inlayer_norm_b(b_matrix, tags, observation)
-            a_matrix = normalize_a(a_matrix, tags)
+            # b_matrix = inlayer_norm_b(b_matrix, tags, observation)
+            # a_matrix = normalize_a(a_matrix, tags)
     return a_matrix, b_matrix
 
 def tokenize(line_list):
@@ -348,15 +348,17 @@ def calc_acc(b_matrix,words,labels,tags):
     print(len(words),len(labels),len(tags))
     #use only words which have one of the tags as labels
     from sklearn.metrics import accuracy_score
-    selected_words =words
-    truelabels = labels
+    selected_words =[]
+    truelabels = []
+    # selected_words =words
+    # truelabels = labels
     #print(tags)
-    # for i,label in enumerate(labels):
-    #     if label in tags:
-    #         selected_words.append(words[i])
-    #         truelabels.append(label)
-    #     else:
-    #         print("{} not in tags".format(label))
+    for i,label in enumerate(labels):
+        if label in tags:
+            selected_words.append(words[i])
+            truelabels.append(label)
+        else:
+            print("{} not in tags".format(label))
             
     predicted_labels = []
 
@@ -372,8 +374,15 @@ def calc_acc(b_matrix,words,labels,tags):
                 max_tag='-'
         predicted_labels.append(max_tag)
     print("Predicting for ",len(selected_words))
-    score = accuracy_score(truelabels,predicted_labels)
-    print(score)
+    n = len(truelabels)
+    c =0
+    for i in range(n):
+        if truelabels[i] == predicted_labels[i]:
+            c+=1
+
+    score =(c*100)/n
+    #score = accuracy_score(truelabels,predicted_labels)
+    print(c,score)
 
 
 
@@ -383,7 +392,7 @@ if __name__ == '__main__':
     line_list = tokenize(text)
     print(len(words),len(labels),len(tags))
     print("There are {} tags".format(len(tags)))
-    # tags=tags[:20]
+    #tags=tags[:20]
     #tags = ['np', 'nn', 'jj', 'in', 'vb', 'to', 'dt', 'prp', 'rb', 'cc']
     #print(line_list[:10])
     #print(line_list)
@@ -394,7 +403,7 @@ if __name__ == '__main__':
     print("Initializing b tags.....")
     b_matrix = initialize_b(tags, line_list)
     #print(pi)
-    a_matrix = normalize_a(a_matrix, tags)
+    #a_matrix = normalize_a(a_matrix, tags)
     #b_matrix = normalize_b(b_matrix, tags, line_list)
     # print b_matrix['NN']['fulton']
     

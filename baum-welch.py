@@ -272,7 +272,7 @@ def baum_welch(a_matrix, b_matrix, tags, line_list):
             else:
                 1
         
-        for i in range(10):     # Fixed number of observations = 1000
+        for i in range(10):     
             print("-----------",i,"------------")
             #E-STEP
             alpha, scale_values = forward(a_matrix, b_matrix, pi, observation, tags)
@@ -346,9 +346,9 @@ def tokenize(filename):
     return lines            
 
 if __name__ == '__main__':
-    filename = 'trial.txt'
-    #tags = ['NP', 'NN', 'JJ', 'IN', 'VB', 'TO', 'DT', 'PRP', 'RB', 'CC']
-    tags=['Noun','Verb','Model']
+    filename = 'brown100.txt'
+    tags = ['NP', 'NN', 'JJ', 'IN', 'VB', 'TO', 'DT', 'PRP', 'RB', 'CC']
+    
     line_list = tokenize(filename)
     #print(line_list)
     pi = initialize_pi(tags)
@@ -357,13 +357,10 @@ if __name__ == '__main__':
     b_matrix = initialize_b(tags, line_list)
     print(pi)
     a_matrix = normalize_a(a_matrix, tags)
-    #b_matrix = normalize_b(b_matrix, tags, line_list)
-    # print b_matrix['NN']['fulton']
+    
     
     a_matrix, b_matrix = baum_welch(a_matrix, b_matrix, tags, line_list)
-    # for dic in b_matrix['NP']:
-    #     ordered_b = OrderedDict(sorted(b_matrix.iteritems(), key=lambda x: x[1], reverse=True))
-    #print ( ordered_b )
+
     top_dict = {}
     for tag in b_matrix:
         col = b_matrix[tag]
