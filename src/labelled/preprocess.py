@@ -27,14 +27,14 @@ def preprocessor():
         for word in s:
             words.append(word)
     
-    x = dict(zip(words,tags))
-    from collections import Counter
-    coun = Counter(x)
-    words = []
-    tags = []
-    for word, tag in coun.most_common(200): 
-        words.append(word)
-        tags.append(tag)
+    # x = dict(zip(words,tags))
+    # from collections import Counter
+    # coun = Counter(x)
+    # words = []
+    # tags = []
+    # for word, tag in coun.most_common(500): 
+    #     words.append(word)
+    #     tags.append(tag)
     uniquetags = list(set(tags))
  
     tkntext= np.array(tkntext)
