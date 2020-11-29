@@ -400,7 +400,3 @@ if __name__ == '__main__':
                 f2.write("{} {} {}".format(i,j,b_matrix[i][j]))
                 f2.write("\n")
             f2.write("\n")
-    print("A- MATRIX")
-    print(a_matrix)
-    # print("\n\n\n")
-    # print(b_matrix)
